@@ -1,0 +1,770 @@
+ZAJEDNICKI
+==============================================================================
+
+public class Igra implements Serializable {
+    private int rb;
+    private String kombinacija;
+    private int brPogodjenihNaMestu;
+    private int brPogodjenihNisuNaMestu;
+
+    public Igra() {
+    }
+
+    public Igra(int rb, String kombinacija, int brPogodjenihNaMestu, int brPogodjenihNisuNaMestu) {
+        this.rb = rb;
+        this.kombinacija = kombinacija;
+        this.brPogodjenihNaMestu = brPogodjenihNaMestu;
+        this.brPogodjenihNisuNaMestu = brPogodjenihNisuNaMestu;
+    }
+
+    public int getRb() {
+        return rb;
+    }
+
+    public void setRb(int rb) {
+        this.rb = rb;
+    }
+
+    public String getKombinacija() {
+        return kombinacija;
+    }
+
+    public void setKombinacija(String kombinacija) {
+        this.kombinacija = kombinacija;
+    }
+
+    public int getBrPogodjenihNaMestu() {
+        return brPogodjenihNaMestu;
+    }
+
+    public void setBrPogodjenihNaMestu(int brPogodjenihNaMestu) {
+        this.brPogodjenihNaMestu = brPogodjenihNaMestu;
+    }
+
+    public int getBrPogodjenihNisuNaMestu() {
+        return brPogodjenihNisuNaMestu;
+    }
+
+    public void setBrPogodjenihNisuNaMestu(int brPogodjenihNisuNaMestu) {
+        this.brPogodjenihNisuNaMestu = brPogodjenihNisuNaMestu;
+    }
+
+    @Override
+    public String toString() {
+        return "Igra{" + "rb=" + rb + ", kombinacija=" + kombinacija + ", brPogodjenihNaMestu=" + brPogodjenihNaMestu + ", brPogodjenihNisuNaMestu=" + brPogodjenihNisuNaMestu + '}';
+    }
+
+
+
+public class RezultatIgre implements Serializable {
+    private int id;
+    private Date datumVreme;
+    private String dobitnaKomb;
+    private int brojPokusaja;
+    private String rezultat;
+    private List<Igra> igra;
+
+    public RezultatIgre() {
+    }
+
+    public RezultatIgre(int id, Date datumVreme, String dobitnaKomb, int brojPokusaja, String rezultat, List<Igra> igra) {
+        this.id = id;
+        this.datumVreme = datumVreme;
+        this.dobitnaKomb = dobitnaKomb;
+        this.brojPokusaja = brojPokusaja;
+        this.rezultat = rezultat;
+        this.igra = igra;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public Date getDatumVreme() {
+        return datumVreme;
+    }
+
+    public void setDatumVreme(Date datumVreme) {
+        this.datumVreme = datumVreme;
+    }
+
+    public String getDobitnaKomb() {
+        return dobitnaKomb;
+    }
+
+    public void setDobitnaKomb(String dobitnaKomb) {
+        this.dobitnaKomb = dobitnaKomb;
+    }
+
+    public int getBrojPokusaja() {
+        return brojPokusaja;
+    }
+
+    public void setBrojPokusaja(int brojPokusaja) {
+        this.brojPokusaja = brojPokusaja;
+    }
+
+    public String getRezultat() {
+        return rezultat;
+    }
+
+    public void setRezultat(String rezultat) {
+        this.rezultat = rezultat;
+    }
+
+    public List<Igra> getIgra() {
+        return igra;
+    }
+
+    public void setIgra(List<Igra> igra) {
+        this.igra = igra;
+    }
+    
+    
+}
+
+
+public class Operacije {
+
+    public static final int POGADJAJ = 1;
+    
+}
+
+
+
+
+
+
+
+
+
+
+
+
+SERVER
+=====================================================================================
+public class DBBroker {
+
+
+    public void sacuvajIgru(RezultatIgre rezultat) {
+        try {
+            System.out.println(rezultat);
+            int idRez = -1;
+            
+            String upit = "INSERT INTO rezultat (datumVreme, dobitnaKomb, brPokusaja, rezultatIgre) VALUES (?, ?, ?, ?)";
+            
+            PreparedStatement ps = Konekcija.getInstance().getConnection().prepareStatement(upit, Statement.RETURN_GENERATED_KEYS);
+            
+            Timestamp sqlDatum = new Timestamp(rezultat.getDatumVreme().getTime());
+            ps.setTimestamp(1, sqlDatum);
+            ps.setString(2, rezultat.getDobitnaKomb());
+            ps.setInt(3, rezultat.getBrojPokusaja());
+            ps.setString(4, rezultat.getRezultat());
+            
+            ps.executeUpdate();
+            ResultSet rs = ps.getGeneratedKeys();
+            if(rs.next()){
+                idRez = rs.getInt(1);
+            }
+            System.out.println("ID je " + idRez);
+            
+            
+            String upit1 = "INSERT INTO igra (kombinacija, naMestu, vanMesta, rezultat) VALUES (?, ?, ?, ?)";
+            
+            PreparedStatement ps1 = Konekcija.getInstance().getConnection().prepareStatement(upit1);
+            for (Igra igra : rezultat.getIgra()) {
+                ps1.setString(1, igra.getKombinacija());
+                ps1.setInt(2, igra.getBrPogodjenihNaMestu());
+                ps1.setInt(3, igra.getBrPogodjenihNisuNaMestu());
+                ps1.setInt(4, idRez);
+                ps1.addBatch();
+            }
+            ps1.executeBatch();
+            
+            Konekcija.getInstance().getConnection().commit();
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public ArrayList<RezultatIgre> vratiRezultate() {
+        
+        ArrayList<RezultatIgre> lista = new ArrayList<RezultatIgre>();
+        
+        String upit = "SELECT * FROM rezultat";
+        
+        try {
+            Statement st = Konekcija.getInstance().getConnection().createStatement();
+            ResultSet rs = st.executeQuery(upit);
+            while(rs.next()){
+                int id = rs.getInt("id");
+                Timestamp datumVreme = rs.getTimestamp("datumVreme");
+                String dobitnaKomb = rs.getString("dobitnaKomb");
+                int brojPokusaja = rs.getInt("brPokusaja");
+                String rezultat = rs.getString("rezultatIgre");
+                Date datumVremeDate = new Date(datumVreme.getTime());
+                RezultatIgre rezultatIgre = new RezultatIgre(id, datumVremeDate, dobitnaKomb, brojPokusaja, rezultat, new ArrayList<Igra>());
+                
+                lista.add(rezultatIgre);
+                
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        
+        return lista;
+    }
+
+    public ArrayList<Igra> vratiIgre(int id) {
+        
+        ArrayList<Igra> lista = new ArrayList<Igra>();
+        
+        String upit = "SELECT * FROM igra WHERE rezultat = " + id;
+        System.out.println(upit);
+        
+        try {
+            Statement st = Konekcija.getInstance().getConnection().createStatement();
+            ResultSet rs = st.executeQuery(upit);
+            while(rs.next()){
+
+                String kombinacija = rs.getString("kombinacija");
+                int brPogodjenihNaMestu = rs.getInt("naMestu");
+                int brPogodjenihNisuNaMestu = rs.getInt("vanMesta");
+
+                Igra igra = new Igra(-1, kombinacija, brPogodjenihNaMestu, brPogodjenihNisuNaMestu);
+                lista.add(igra);
+                
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        
+        return lista;
+    }
+
+   
+    
+}
+
+
+
+================================================
+
+public class Controller {
+    private static Controller instance;
+    
+    private ServerskaForma sf;
+    
+    private ArrayList<Igra> igre;
+    private RezultatIgre rezultat;
+    
+    private DBBroker dbb;
+    
+
+    public Controller() {
+        
+        igre = new ArrayList<>();
+        rezultat = new RezultatIgre(-1, new Date(), null, -1, "izgubio", igre);
+        dbb = new DBBroker();
+    }
+
+    public static Controller getInstance() {
+        if(instance == null){
+            instance = new Controller();
+        }
+        return instance;
+    }
+
+    public Igra pogadjaj(Igra igra) {
+
+        if(igre.size() > 5){
+            return igra;
+        }
+        
+        String kombinacijaNaServeru = sf.vratiKombinaciju();
+        String kombinacijaNaKlijentu = igra.getKombinacija();
+        System.out.println(kombinacijaNaServeru); //2-1-0-5
+        System.out.println(kombinacijaNaKlijentu); //2-5-3-4
+        
+        int brojacNaMestu = 0;
+        int brojacVanMesta = 0;
+        
+        String[] niz1 = kombinacijaNaServeru.split("-"); // {"2", "1", "0", "5"}
+        String[] niz2 = kombinacijaNaKlijentu.split("-"); // {"2", "5", "3", "4"}
+        
+        if(niz1[0].equals(niz2[0])){
+            brojacNaMestu++;
+        }else{
+            if(kombinacijaNaKlijentu.contains(niz1[0])){
+                brojacVanMesta++;
+            }
+        }
+        
+        if(niz1[1].equals(niz2[1])){
+            brojacNaMestu++;
+        }else{
+            if(kombinacijaNaKlijentu.contains(niz1[1])){
+                brojacVanMesta++;
+            }
+        }
+        
+        if(niz1[2].equals(niz2[2])){
+            brojacNaMestu++;
+        }else{
+            if(kombinacijaNaKlijentu.contains(niz1[2])){
+                brojacVanMesta++;
+            }
+        }
+        
+        if(niz1[3].equals(niz2[3])){
+            brojacNaMestu++;
+        }else{
+            if(kombinacijaNaKlijentu.contains(niz1[3])){
+                brojacVanMesta++;
+            }
+        }
+        
+        igra.setBrPogodjenihNaMestu(brojacNaMestu);
+        igra.setBrPogodjenihNisuNaMestu(brojacVanMesta);
+        
+        if(brojacNaMestu == 4){
+            rezultat.setRezultat("pobedio");
+        }
+        
+        igre.add(igra);
+        return igra;
+    }
+
+    public void setSf(ServerskaForma sf) {
+        this.sf = sf;
+    }
+
+    public ArrayList<Igra> getIgre() {
+        return igre;
+    }
+
+    public void setIgre(ArrayList<Igra> igre) {
+        this.igre = igre;
+    }
+
+    public RezultatIgre getRezultat() {
+        return rezultat;
+    }
+
+    public void setRezultat(RezultatIgre rezultat) {
+        this.rezultat = rezultat;
+    }
+
+    public void sacuvajIgru() {
+        rezultat.setDobitnaKomb(sf.vratiKombinaciju());
+        rezultat.setBrojPokusaja(igre.size());
+        dbb.sacuvajIgru(rezultat);
+    }
+
+    public ArrayList<RezultatIgre> vratiRezultate() {
+        return dbb.vratiRezultate();
+    }
+
+    public ArrayList<Igra> vratiIgre(int id) {
+        return dbb.vratiIgre(id);
+    }
+    
+        
+    
+    
+}
+
+
+================================================
+
+public class ServerskaForma extends javax.swing.JFrame {
+
+    Nit bingoNit;
+    
+    PokreniServer ps;
+    
+    /**
+     * Creates new form ServerskaForma
+     */
+    public ServerskaForma() {
+        initComponents();
+        
+        Controller.getInstance().setSf(this);
+    }
+
+
+ private void jButtonStartActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonStartActionPerformed
+        bingoNit = new Nit(jLabelBroj1, jLabelBroj2, jLabelBroj3, jLabelBroj4);
+        bingoNit.start();
+    }//GEN-LAST:event_jButtonStartActionPerformed
+
+    private void jButtonStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonStopActionPerformed
+        
+        bingoNit.zaustaviNit();
+    }//GEN-LAST:event_jButtonStopActionPerformed
+
+    private void jButtonPokerniIgruActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonPokerniIgruActionPerformed
+        ps = new PokreniServer();
+        ps.start();
+    }//GEN-LAST:event_jButtonPokerniIgruActionPerformed
+
+    private void jButtonSacuvajIgruActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonSacuvajIgruActionPerformed
+        Controller.getInstance().sacuvajIgru();
+    }//GEN-LAST:event_jButtonSacuvajIgruActionPerformed
+
+    private void jMenuItem2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem2ActionPerformed
+        MojeIgreForma mif = new MojeIgreForma();
+        mif.setVisible(true);
+    }//GEN-LAST:event_jMenuItem2ActionPerformed
+
+
+public String vratiKombinaciju() {
+        return jLabelBroj1.getText() + "-" + jLabelBroj2.getText() + "-" + jLabelBroj3.getText() + "-" + jLabelBroj4.getText();
+    }
+
+
+================================================
+
+
+public class MojeIgreForma extends javax.swing.JFrame {
+
+    List<RezultatIgre> rezultati;
+    /**
+     * Creates new form MojeIgreForma
+     */
+    public MojeIgreForma() {
+        initComponents();
+        
+        rezultati = Controller.getInstance().vratiRezultate();
+        ModelTabeleRezultat mtr = new ModelTabeleRezultat(rezultati);
+        jTableRezultati.setModel(mtr);
+    }
+
+private void jButtonDetaljiActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonDetaljiActionPerformed
+        int selektovaniRed = jTableRezultati.getSelectedRow();
+        if(selektovaniRed ==-1){
+            return;
+        }
+        ModelTabeleRezultat mtr = (ModelTabeleRezultat) jTableRezultati.getModel();
+        int id = mtr.vratiID(selektovaniRed);
+        
+        List<Igra> igre = Controller.getInstance().vratiIgre(id);
+        
+        ModelTabeleIgra mti = new ModelTabeleIgra(igre);
+        jTableIgre.setModel(mti);
+    }//GEN-LAST:event_jButtonDetaljiActionPerformed
+
+
+================================================
+
+public class ModelTabeleIgra extends AbstractTableModel {
+
+    private List<Igra> lista = new ArrayList<>();
+    private String[] kolone = {"rb", "kombinacije", "NA MESTU", "VAN MESTA"};
+
+    public ModelTabeleIgra(List<Igra> lista) {
+        this.lista = lista;
+    }
+    
+    
+    @Override
+    public int getRowCount() {
+        return lista.size();
+    }
+
+    @Override
+    public int getColumnCount() {
+        return kolone.length;
+    }
+
+    @Override
+    public String getColumnName(int column) {
+        return kolone[column];
+    }
+
+    
+    
+    @Override
+    public Object getValueAt(int rowIndex, int columnIndex) {
+        Igra i = lista.get(rowIndex);
+        
+        switch (columnIndex) {
+            case 0: return i.getRb();
+            case 1: return i.getKombinacija();
+            case 2: return i.getBrPogodjenihNaMestu();
+            case 3: return i.getBrPogodjenihNisuNaMestu();
+            default:
+                return "NA";
+        }
+    }
+
+    public List<Igra> getLista() {
+        return lista;
+    }
+
+    void dodajIgru(Igra igra) {
+        int rb = lista.size()+1;
+        igra.setRb(rb);
+        lista.add(igra);
+        fireTableDataChanged();
+    }
+    
+}
+
+
+================================================
+
+
+public class ModelTabeleRezultat extends AbstractTableModel{
+
+    private List<RezultatIgre> lista = new ArrayList<>();
+    private String[] kolone = {"id","datumVreme", "kombinacija", "brPokusaja", "rezultatIgre"};
+
+    public ModelTabeleRezultat(List<RezultatIgre> lista) {
+        this.lista = lista;
+    }
+    
+    
+    
+    @Override
+    public int getRowCount() {
+        return lista.size();
+    }
+
+    @Override
+    public int getColumnCount() {
+        return kolone.length;
+    }
+
+    @Override
+    public String getColumnName(int column) {
+        return kolone[column];
+    }
+
+    
+    
+    @Override
+    public Object getValueAt(int rowIndex, int columnIndex) {
+        RezultatIgre i = lista.get(rowIndex);
+        
+        switch (columnIndex) {
+            case 0: return i.getId();
+            case 1: return i.getDatumVreme();
+            case 2: return i.getDobitnaKomb();
+            case 3: return i.getBrojPokusaja();
+            case 4: return i.getRezultat();
+            default:
+                return "NA";
+        }
+    }
+
+    public List<RezultatIgre> getLista() {
+        return lista;
+    }
+
+    int vratiID(int selektovaniRed) {
+        return lista.get(selektovaniRed).getId();
+    }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+KLIJENT
+==============================================================================
+
+public class BrojNiti extends Thread{
+    
+    private JLabel labela;
+    private boolean kraj = false;
+
+    public BrojNiti(JLabel labela) {
+        this.labela = labela;
+    }
+
+    @Override
+    public void run() {
+        
+         while(!kraj){
+            int broj1 = (int) Math.round(Math.random()*5); //0.2512313*5 = 1.25 -> 1
+            
+            labela.setText(broj1+"");
+
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(BrojNiti.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+    
+    public void zaustaviNit(){
+        kraj = true;
+    }
+}
+
+
+
+==============================================================================
+
+
+public class KlijentskaForma extends javax.swing.JFrame {
+
+    BrojNiti nit1;
+    BrojNiti nit2;
+    BrojNiti nit3;
+    BrojNiti nit4;
+    
+    private int brojPokusaja = 0;
+    /**
+     * Creates new form KlijentskaForma
+     */
+    public KlijentskaForma() {
+        initComponents();
+        
+        
+        ModelTabeleIgra mti = new ModelTabeleIgra();
+        jTableIgra.setModel(mti);
+        //popuniTabelu();
+    }
+
+
+
+private void jButtonStart2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonStart2ActionPerformed
+        nit2 = new BrojNiti(jLabelBroj2);
+        nit2.start();
+    }//GEN-LAST:event_jButtonStart2ActionPerformed
+
+    private void jButtonStart1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonStart1ActionPerformed
+        nit1 = new BrojNiti(jLabelBroj1);
+        nit1.start();
+    }//GEN-LAST:event_jButtonStart1ActionPerformed
+
+    private void jButtonStop1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonStop1ActionPerformed
+        nit1.zaustaviNit();
+    }//GEN-LAST:event_jButtonStop1ActionPerformed
+
+    private void jButtonStop2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonStop2ActionPerformed
+        nit2.zaustaviNit();
+    }//GEN-LAST:event_jButtonStop2ActionPerformed
+
+    private void jButtonStart3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonStart3ActionPerformed
+        nit3 = new BrojNiti(jLabelBroj3);
+        nit3.start();
+    }//GEN-LAST:event_jButtonStart3ActionPerformed
+
+    private void jButtonStart4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonStart4ActionPerformed
+        nit4 = new BrojNiti(jLabelBroj4);
+        nit4.start();
+    }//GEN-LAST:event_jButtonStart4ActionPerformed
+
+    private void jButtonStop3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonStop3ActionPerformed
+        nit3.zaustaviNit();
+    }//GEN-LAST:event_jButtonStop3ActionPerformed
+
+    private void jButtonStop4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonStop4ActionPerformed
+        nit4.zaustaviNit();
+    }//GEN-LAST:event_jButtonStop4ActionPerformed
+
+    private void jButtonPosaljiActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonPosaljiActionPerformed
+        
+        if(brojPokusaja<=5){
+        String kombinacija = jLabelBroj1.getText() + "-" + jLabelBroj2.getText() + "-" + jLabelBroj3.getText() + "-" + jLabelBroj4.getText();
+        
+        System.out.println(kombinacija);
+        
+        Igra igra = new Igra(-1, kombinacija, -1, -1);
+        KlijentskiZahtev kz = new KlijentskiZahtev(Operacije.POGADJAJ, igra);
+        Komunikacija.getInstance().posaljiZahtev(kz);
+        
+        ServerskiOdgovor so = Komunikacija.getInstance().primiOdgovor();
+        igra = (Igra) so.getOdgovor();
+        
+        brojPokusaja++;
+        
+        jLabelNaMestu.setText(igra.getBrPogodjenihNaMestu() + "");
+        jLabelVanMesta.setText(igra.getBrPogodjenihNisuNaMestu() + "");
+        
+        ModelTabeleIgra mti = (ModelTabeleIgra) jTableIgra.getModel();
+        mti.dodajIgru(igra);
+        }else{
+            System.out.println("NEMA VISE POKUSAJA");
+        }
+
+
+private void popuniTabelu() {
+        
+        ModelTabeleIgra mti = new ModelTabeleIgra();
+        jTableIgra.setModel(mti);
+    }
+
+========================================================================================
+
+public class ModelTabeleIgra extends AbstractTableModel {
+
+    private List<Igra> lista = new ArrayList<>();
+    private String[] kolone = {"rb", "kombinacije", "NA MESTU", "VAN MESTA"};
+
+    public ModelTabeleIgra() {
+        
+    }
+    
+    
+    @Override
+    public int getRowCount() {
+        return lista.size();
+    }
+
+    @Override
+    public int getColumnCount() {
+        return kolone.length;
+    }
+
+    @Override
+    public String getColumnName(int column) {
+        return kolone[column];
+    }
+
+    
+    
+    @Override
+    public Object getValueAt(int rowIndex, int columnIndex) {
+        Igra i = lista.get(rowIndex);
+        
+        switch (columnIndex) {
+            case 0: return i.getRb();
+            case 1: return i.getKombinacija();
+            case 2: return i.getBrPogodjenihNaMestu();
+            case 3: return i.getBrPogodjenihNisuNaMestu();
+            default:
+                return "NA";
+        }
+    }
+
+    public List<Igra> getLista() {
+        return lista;
+    }
+
+    void dodajIgru(Igra igra) {
+        int rb = lista.size()+1;
+        igra.setRb(rb);
+        lista.add(igra);
+        fireTableDataChanged();
+    }
+    
+}

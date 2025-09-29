@@ -1,0 +1,1103 @@
+Veees
+Zaj
+==========================================================================================
+public class Slovo implements Serializable {
+    private int pozicija;
+    private char slovo;
+
+    public Slovo() {
+    }
+
+    public Slovo(int pozicija, char slovo) {
+        this.pozicija = pozicija;
+        this.slovo = slovo;
+    }
+
+    public int getPozicija() {
+        return pozicija;
+    }
+
+    public void setPozicija(int pozicija) {
+        this.pozicija = pozicija;
+    }
+
+    public char getSlovo() {
+        return slovo;
+    }
+
+    public void setSlovo(char slovo) {
+        this.slovo = slovo;
+    }
+
+    @Override
+    public String toString() {
+        return "Slovo{" + "pozicija=" + pozicija + ", slovo=" + slovo + '}';
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 5;
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Slovo other = (Slovo) obj;
+        if (this.pozicija != other.pozicija) {
+            return false;
+        }
+        return this.slovo == other.slovo;
+    }
+
+public class Operacije {
+    public static final int POGADJAJ = 1;
+}
+
+
+ser
+==========================================================================================
+
+public class Controller {
+    private static Controller instance;
+
+    private List<String> zadateReci = new ArrayList<>();
+    
+    private String odabranaRec;
+    
+    public Controller() {
+        zadateReci.add("PETAO");
+        zadateReci.add("MARKO");
+        zadateReci.add("PETAR");
+        zadateReci.add("JANKO");
+        zadateReci.add("VANJA");
+    }
+
+    public static Controller getInstance() {
+        if(instance == null){
+            instance = new Controller();
+        }
+        return instance;
+    }
+
+    public List<String> getZadateReci() {
+        return zadateReci;
+    }
+
+    public void setZadateReci(List<String> zadateReci) {
+        this.zadateReci = zadateReci;
+    }
+
+    public String getOdabranaRec() {
+        return odabranaRec;
+    }
+
+    public void setOdabranaRec(String odabranaRec) {
+        this.odabranaRec = odabranaRec;
+    }
+
+    public Slovo pogadjanje(Slovo slovo) {
+        char karakter = slovo.getSlovo();
+        for(int i = 0; i<odabranaRec.length(); i++){
+            if(odabranaRec.charAt(i) == karakter){
+                slovo.setPozicija(i+1);
+                return slovo;
+            }
+        }
+        slovo.setPozicija(-1);
+        return slovo;
+    }
+
+
+
+
+
+
+
+
+public class ServerskaForma extends javax.swing.JFrame {
+
+    PokreniServer ps;
+    
+    List<String> zadateReci = Controller.getInstance().getZadateReci();
+    
+    String odabranaRec;
+    /**
+     * Creates new form ServerskaForma
+     */
+    public ServerskaForma() {
+        initComponents();
+        
+        //brise ono item1,2,3
+        jComboBoxOdaberiRec.removeAllItems();
+        
+        for (String zr : zadateReci) {
+            jComboBoxOdaberiRec.addItem(zr);
+        }
+        
+        ps = new PokreniServer();
+        ps.start();
+    }
+
+
+
+
+kli
+==========================================================================================
+public class KlijentskaForma extends javax.swing.JFrame {
+
+    private int brojPokusaja = 0;
+    private int brojPogodjenih = 0;
+    List<Character> pokusanaSlova = new ArrayList<>();
+    
+    /**
+     * Creates new form KlijentskaForma
+     */
+    public KlijentskaForma() {
+        initComponents();
+    }
+
+private void jTextFieldSlovo3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldSlovo3ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jTextFieldSlovo3ActionPerformed
+
+    private void jButtonPogadjajActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonPogadjajActionPerformed
+        
+        brojPokusaja++;
+        jLabelBrPokusaja.setText(10-brojPokusaja+"");
+        if(brojPokusaja>=10){
+            JOptionPane.showMessageDialog(this, "NEMA VISE POKUSAJA");
+            jButtonPogadjaj.setEnabled(false);
+            return;
+        }
+        
+        String slovoText = jTextFieldSlovoUnesiSlovo.getText();
+        char slovo = Character.toUpperCase(slovoText.charAt(0));
+        Slovo s = new Slovo(-1, slovo);
+        
+        if(pokusanaSlova.contains(slovo)){
+            JOptionPane.showMessageDialog(this, "TO SLOVO JE VEC ISKORISCENO");
+            return;
+        }
+        
+        KlijentskiZahtev kz = new KlijentskiZahtev(Operacije.POGADJAJ, s);
+        Komunikacija.getInstance().posaljiZahtev(kz);
+        
+        ServerskiOdgovor so = Komunikacija.getInstance().primiOdgovor();
+        s = (Slovo) so.getOdgovor();
+        
+        pokusanaSlova.add(slovo);
+        
+        if(s.getPozicija() == -1){
+            JOptionPane.showMessageDialog(null, "NIJE POGODJENO");
+        }else{
+            brojPogodjenih++;
+            JOptionPane.showMessageDialog(null, "JESTE POGODJENO");
+            if(s.getPozicija()==1){
+                jTextFieldSlovo1.setText(s.getSlovo() + "");
+            }
+            if(s.getPozicija()==2){
+                jTextFieldSlovo2.setText(s.getSlovo() + "");
+            }
+            if(s.getPozicija()==3){
+                jTextFieldSlovo3.setText(s.getSlovo() + "");
+            }
+            if(s.getPozicija()==4){
+                jTextFieldSlovo4.setText(s.getSlovo() + "");
+            }
+            if(s.getPozicija()==5){
+                jTextFieldSlovo5.setText(s.getSlovo() + "");
+            }
+            if(brojPogodjenih == 5){
+                JOptionPane.showMessageDialog(null, "POBEDILI STE");
+                jButtonPogadjaj.setEnabled(false);
+            }
+        }
+        jTextFieldSlovoUnesiSlovo.setText("");
+        String textZaLabelu = "";
+        for (Character k : pokusanaSlova) {
+            textZaLabelu+= k;
+            textZaLabelu+= ", ";
+        }
+        jLabelKoriscenaSlova.setText(textZaLabelu);
+    }//GEN-LAST:event_jButtonPogadjajActionPerformed
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String args[]) {
+        /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         */
+        try {
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (ClassNotFoundException ex) {
+            java.util.logging.Logger.getLogger(KlijentskaForma.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (InstantiationException ex) {
+            java.util.logging.Logger.getLogger(KlijentskaForma.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            java.util.logging.Logger.getLogger(KlijentskaForma.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(KlijentskaForma.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
+        //</editor-fold>
+
+        /* Create and display the form */
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                new KlijentskaForma().setVisible(true);
+            }
+        });
+    }
+
+
+
+
+Ceeet
+Zaj
+==========================================================================================
+
+public class Admin implements Serializable {
+    private int adminID;
+    private String korisnickoIme;
+    private String lozinka;
+    private String ime;
+    private String prezime;
+
+public class Poruka implements Serializable {
+    private int id;
+    private User posiljalac;
+    private User primalac;
+    private String tekstPoruke;
+    private Date datumVreme;
+
+
+public class User implements Serializable {
+    private int id;
+    private String korisnickoIme;
+    private String lozinka;
+
+public class Operacije {
+    
+    public static final int LOGIN = 1;
+    public static final int POSALJI_SVIMA = 2;
+    public static final int VRATI_TRENUTNO_ULOGOVANE = 3;
+    public static final int POSALJI_JEDNOM = 4;
+    public static final int VRATI_SVE_PORUKE_KORISNIKA = 5;
+}
+
+
+ser
+==========================================================================================
+
+public class DBBroker {
+
+    public Admin login(String korisnickoIme, String lozinka) {
+        Admin a = null;
+        try {
+            
+            
+            String upit = "SELECT * FROM admin WHERE korisnickoIme = ? AND lozinka = ?";
+            
+            PreparedStatement ps = Konekcija.getInstance().getConnection().prepareStatement(upit);
+            ps.setString(1, korisnickoIme);
+            ps.setString(2, lozinka);
+            ResultSet rs = ps.executeQuery();
+            if(rs.next()){
+               
+                int id = rs.getInt("adminID");
+                String ime = rs.getString("ime");
+                String prezime = rs.getString("prezime");
+                //ispisuje u konzoli podatke od trenutno prijavljenog Admina
+                System.out.println(a);
+                
+                a = new Admin(id, korisnickoIme, lozinka, ime ,prezime);          
+                return a;
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return a;
+    }
+
+    public boolean proveriKorIme(String korIme) {
+        
+        try {
+            String upit = "SELECT * FROM USER WHERE korisnickoIme ='" + korIme + "'";
+            System.out.println(upit);
+            
+            Statement st = Konekcija.getInstance().getConnection().createStatement();
+            ResultSet rs = st.executeQuery(upit);
+            if(rs.next()){
+                return false;
+            }else{
+                return true;
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return true;
+    }
+
+    public boolean unesiKorisnika(String korIme, String lozinka) {
+        
+        try {
+            String upit = "INSERT INTO USER (korisnickoIme, lozinka) VALUES (?, ?)";
+            
+            PreparedStatement ps = Konekcija.getInstance().getConnection().prepareStatement(upit);
+            ps.setString(1, korIme);
+            ps.setString(2, lozinka);
+            int brojRedova = ps.executeUpdate();
+            if(brojRedova > 0){
+                Konekcija.getInstance().getConnection().commit();
+                return true;
+            }else{
+                return false;
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return false;
+    }
+
+    public List<Poruka> vratiPoruke(int offset) {
+        
+        try {
+            List<Poruka> lista = new ArrayList<>();
+            
+            String upit = "SELECT * FROM poruka p JOIN USER pos ON pos.userID = p.posiljalac JOIN USER prim ON prim.userID = p.primalac LIMIT 5 OFFSET " + offset;
+            
+            Statement st = Konekcija.getInstance().getConnection().createStatement();
+            ResultSet rs = st.executeQuery(upit);
+            while(rs.next()){
+                int porukaID = rs.getInt("p.id");
+                
+                
+                User posiljalac = new User(rs.getInt("pos.userid"), rs.getString("pos.korisnickoIme"), rs.getString("pos.lozinka"));
+                User primalac = new User(rs.getInt("prim.userid"), rs.getString("prim.korisnickoIme"), rs.getString("prim.lozinka"));
+                
+                Timestamp datumVremeSQL = rs.getTimestamp("p.datumVreme");
+                Date datumVremeUtil = new Date(datumVremeSQL.getTime());
+                
+                String text = rs.getString("tekst");
+                
+                Poruka p = new Poruka(porukaID, posiljalac, primalac, text, datumVremeUtil);
+                lista.add(p);
+            }
+            
+            
+            return lista;
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
+    }
+
+    public User loginUser(User user) {
+         User u = null;
+        try {
+            String upit = "SELECT * FROM user WHERE korisnickoIme = ? AND lozinka = ?";
+            
+            PreparedStatement ps = Konekcija.getInstance().getConnection().prepareStatement(upit);
+            ps.setString(1, user.getKorisnickoIme());
+            ps.setString(2, user.getLozinka());
+            ResultSet rs = ps.executeQuery();
+            if(rs.next()){
+               
+                int id = rs.getInt("userID");
+                String korisnickoIme = rs.getString("korisnickoIme");
+                String lozinka = rs.getString("lozinka");
+                
+                u = new User(id, korisnickoIme, lozinka);
+                System.out.println(u);     
+                return u;
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return u;
+    }
+
+    
+    //pomocna metoda za posaljiSvima
+    public List<User> vratiSveKorisnike(){
+        List<User> sviKorisnici = new ArrayList<>();
+        
+        try {
+            String upit1 = "SELECT * FROM user";
+            Statement st = Konekcija.getInstance().getConnection().createStatement();
+            ResultSet rs = st.executeQuery(upit1);
+            while(rs.next()){
+                int id = rs.getInt("userID");
+                String korisnickoIme = rs.getString("korisnickoIme");
+                String lozinka = rs.getString("lozinka");
+                
+                User u = new User(id, korisnickoIme, lozinka);
+                sviKorisnici.add(u);
+            }
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return sviKorisnici;
+    }
+    
+    public void posaljiSvima(Poruka poruka) {
+        try {
+            List<User> sviKorisnici = new ArrayList<>();
+            
+            String upit = "INSERT INTO poruka (datumVreme, posiljalac, primalac, tekst) VALUES (?, ?, ?, ?)";
+            PreparedStatement ps = Konekcija.getInstance().getConnection().prepareStatement(upit);
+            
+            for (User u : sviKorisnici) {
+                Timestamp ts = new Timestamp(poruka.getDatumVreme().getTime());
+                ps.setTimestamp(1, ts);
+                ps.setInt(2, poruka.getPosiljalac().getId());
+                ps.setInt(3, u.getId());
+                ps.setString(4, poruka.getTekstPoruke());
+                
+                ps.addBatch();
+                
+            }
+            ps.executeBatch();
+            Konekcija.getInstance().getConnection().commit();
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public void posaljiJednom(Poruka poruka) {
+         try {
+            
+            String upit = "INSERT INTO PORUKA (datumvreme,posiljalac,primalac,tekst) VALUES (?,?,?,?)";
+            PreparedStatement ps = Konekcija.getInstance().getConnection().prepareStatement(upit);
+            
+           
+                Timestamp ts = new Timestamp(poruka.getDatumVreme().getTime());
+                ps.setTimestamp(1, ts);
+                ps.setInt(2, poruka.getPosiljalac().getId());
+                ps.setInt(3,poruka.getPrimalac().getId());
+                ps.setString(4, poruka.getTekstPoruke());
+                
+               int brojRedova = ps.executeUpdate();
+               if(brojRedova>0){
+                   System.out.println("USPESNO UNETA PORUKA");
+               }else{
+                    System.out.println("GRESKA PRI UNOSU PORUKE U BAZU");
+               }
+            Konekcija.getInstance().getConnection().commit();
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public List<Poruka> vratiPorukeKorisnika(User user) {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
+    
+}
+
+public class Controller {
+    private static Controller instance;
+    private DBBroker dbb;
+    
+    //ako hocu da u serverskoj formi prikazem podatke o trenutno prijavljenom adminu
+    private Admin admin;
+
+    //slanje tekstualne poruke samo odredjenom klijentu koji je prijavljen na sistem
+    private List<User> trenutnoUlogovani = new ArrayList<>();
+
+    public Controller() {
+        dbb = new DBBroker();
+    }
+
+    public static Controller getInstance() {
+        if(instance==null){
+            instance = new Controller();
+        }
+        return instance;
+    }
+
+    public boolean login(String korisnickoIme, String lozinka) {
+        admin = dbb.login(korisnickoIme, lozinka);
+        if(admin==null){
+            return false;
+        }else{
+            return true;
+        }
+    }
+    
+    public Admin getAdmin() {
+        return admin;
+    }
+
+    public void setAdmin(Admin admin) {
+        this.admin = admin;
+    }
+
+    public boolean proveriKorIme(String korIme) {
+        return dbb.proveriKorIme(korIme);
+    }
+
+    public boolean unesiKorisnika(String korIme, String lozinka) {
+        return dbb.unesiKorisnika(korIme, lozinka);
+    }
+
+    public List<Poruka> vratiPoruke(int offset) {
+        return dbb.vratiPoruke(offset);
+    }
+
+    public User loginUser(User user) {
+        //Nadogradnja -> slanje tekstualne poruke samo odredjenom klijentu koji je prijavljen na sistem
+        //bio je pre samo return
+        
+        User u = dbb.loginUser(user);
+        if(trenutnoUlogovani.contains(u)){
+            trenutnoUlogovani.add(u);
+        }
+        return u;
+    }
+
+    public void posaljiSvima(Poruka poruka) {
+        dbb.posaljiSvima(poruka);
+    }
+
+    public List<User> getTrenutnoUlogovani() {
+        return trenutnoUlogovani;
+    }
+
+    public void posaljiJednom(Poruka poruka) {
+        dbb.posaljiJednom(poruka);
+    }
+
+    public List<Poruka> vratiPorukeKorisnika(User user) {
+        return dbb.vratiPorukeKorisnika(user);
+    }
+
+
+
+public class ObradaKlijentskihZahteva extends Thread {
+    
+    private Socket s;
+
+    public ObradaKlijentskihZahteva(Socket s) {
+        this.s = s;
+    }
+    
+    
+
+    @Override
+    public void run() {
+        while(true){
+            KlijentskiZahtev kz = primiZahtev();
+            ServerskiOdgovor so = new ServerskiOdgovor();
+            
+            switch (kz.getOperacije()) {
+              case Operacije.LOGIN:
+                     User u = Controller.getInstance().loginUser((User)kz.getParametar());
+                     so.setOdgovor(u);
+                     
+                    break;
+                    
+                case Operacije.POSALJI_SVIMA:
+                      Controller.getInstance().posaljiSvima((Poruka)kz.getParametar());
+                    // so.setOdgovor(u);
+                     
+                    break;
+                case Operacije.VRATI_TRENUTNO_ULOGOVANE:
+                      List<User> lista = Controller.getInstance().getTrenutnoUlogovani();
+                     so.setOdgovor(lista); 
+                    break;
+                case Operacije.POSALJI_JEDNOM:
+                      Controller.getInstance().posaljiJednom((Poruka)kz.getParametar());
+                    // so.setOdgovor("USPESNO"); 
+                    break; 
+                case Operacije.VRATI_SVE_PORUKE_KORISNIKA:
+                    List<Poruka> lista2 = Controller.getInstance().vratiPorukeKorisnika((User)kz.getParametar());
+                    so.setOdgovor(lista2);
+                default:
+                    System.out.println("GRESKA");
+            }
+            posaljiOdgovor(so);
+        }
+        
+    }
+
+
+
+
+public class ServerskaForma extends javax.swing.JFrame {
+
+    Admin admin = Controller.getInstance().getAdmin();
+    
+    PokreniServer ps;
+    private int offset = 0;
+    /**
+     * Creates new form ServerskaForma
+     */
+    public ServerskaForma() {
+        initComponents();
+        jLabelAdmin.setText("Zdravo, " + admin.toString());
+        jButtonZaustavi.setEnabled(false);
+        
+        
+    }
+
+private void jButtonPokreniActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonPokreniActionPerformed
+        
+        jButtonPokreni.setEnabled(false);
+        jButtonZaustavi.setEnabled(true);
+        
+        PokreniServer ps = new PokreniServer();
+        ps.start();
+    }//GEN-LAST:event_jButtonPokreniActionPerformed
+
+    private void jButtonZaustaviActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonZaustaviActionPerformed
+        jButtonPokreni.setEnabled(true);
+        jButtonZaustavi.setEnabled(false);
+        ps.zaustaviServer();
+    }//GEN-LAST:event_jButtonZaustaviActionPerformed
+
+    private void jButtonUnesiActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonUnesiActionPerformed
+        UnosKorisnikaForma ukf = new UnosKorisnikaForma(this, true);
+        ukf.setVisible(true);
+    }//GEN-LAST:event_jButtonUnesiActionPerformed
+
+    private void jButtonPrikaziPorukeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonPrikaziPorukeActionPerformed
+        
+        ucitajTabelu();
+        
+    }//GEN-LAST:event_jButtonPrikaziPorukeActionPerformed
+
+    private void jTablePorukaMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTablePorukaMouseClicked
+        //desni klik na tabelu u design/events/mouse/mouseClicked
+        //neko sranje da kada kliknem na poruku on ispise celu poruku u novom prozoru
+        JTable tabela = (JTable) evt.getSource();
+        Point p = evt.getPoint();
+        int red = tabela.rowAtPoint(p);
+        
+        ModelTabelePoruka mtp = (ModelTabelePoruka) jTablePoruka.getModel();
+        String text = mtp.getLista().get(red).getTekstPoruke();
+        JOptionPane.showMessageDialog(null, text);
+    }//GEN-LAST:event_jTablePorukaMouseClicked
+
+    private void jTablePorukaKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jTablePorukaKeyPressed
+        
+        //desni klik na tabelu pa na event/key/keypressed
+        //kada se klikne enter on povecava OFFSET za 5 i tako vraca poruke
+        if(evt.getKeyCode() == KeyEvent.VK_ENTER){
+            ucitajTabelu();
+        }
+    }//GEN-LAST:event_jTablePorukaKeyPressed
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String args[]) {
+        /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         */
+        try {
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (ClassNotFoundException ex) {
+            java.util.logging.Logger.getLogger(ServerskaForma.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (InstantiationException ex) {
+            java.util.logging.Logger.getLogger(ServerskaForma.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            java.util.logging.Logger.getLogger(ServerskaForma.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(ServerskaForma.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
+        //</editor-fold>
+
+        /* Create and display the form */
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                new ServerskaForma().setVisible(true);
+            }
+        });
+    }
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton jButtonPokreni;
+    private javax.swing.JButton jButtonPrikaziPoruke;
+    private javax.swing.JButton jButtonUnesi;
+    private javax.swing.JButton jButtonZaustavi;
+    private javax.swing.JLabel jLabelAdmin;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JTable jTablePoruka;
+    // End of variables declaration//GEN-END:variables
+
+    private void ucitajTabelu() {
+        List<Poruka> poruke = Controller.getInstance().vratiPoruke(offset);
+        
+        ModelTabelePoruka mtp = new ModelTabelePoruka(poruke);
+        jTablePoruka.setModel(mtp);
+        
+        offset +=5;
+    }
+}
+
+
+kli
+==========================================================================================
+
+public class KlijentskaForma extends javax.swing.JFrame {
+
+    private User korisnik;
+
+    public User getKorisnik() {
+        return korisnik;
+    }
+
+    public void setKorisnik(User korisnik) {
+        this.korisnik = korisnik;
+    }
+    
+    
+    /**
+     * Creates new form KlijentskaForma
+     */
+    public KlijentskaForma() {
+        initComponents();
+        
+        KlijentskiZahtev kz = new KlijentskiZahtev(Operacije.VRATI_TRENUTNO_ULOGOVANE, null);
+        Komunikacija.getInstance().posaljiZahtev(kz);
+        
+        ServerskiOdgovor so = Komunikacija.getInstance().primiOdgovor();
+        List<User> ulogovaniKorisnici =  (List<User>) so.getOdgovor();
+        ModelTabeleUser mtu = new ModelTabeleUser(ulogovaniKorisnici);
+        jTableUlogovaniKorisnici.setModel(mtu);
+        
+        KlijentskiZahtev kz2 = new KlijentskiZahtev(Operacije.VRATI_SVE_PORUKE_KORISNIKA, korisnik);
+        Komunikacija.getInstance().posaljiZahtev(kz2);
+        
+        
+    }
+
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        jButtonPosaljiSvima = new javax.swing.JButton();
+        jLabel1 = new javax.swing.JLabel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        jTextArea1 = new javax.swing.JTextArea();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        jTableUlogovaniKorisnici = new javax.swing.JTable();
+        jButtonPosaljiJednom = new javax.swing.JButton();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        jTableSveOstalePoruke = new javax.swing.JTable();
+        jScrollPane4 = new javax.swing.JScrollPane();
+        jTablePoslednjeTriPoruke1 = new javax.swing.JTable();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+
+        jButtonPosaljiSvima.setText("posalji svima");
+        jButtonPosaljiSvima.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButtonPosaljiSvimaActionPerformed(evt);
+            }
+        });
+
+        jLabel1.setText("poruka");
+
+        jTextArea1.setColumns(20);
+        jTextArea1.setRows(5);
+        jTextArea1.setText("poruka koja se salje svim korisnicima lalala!!!");
+        jScrollPane1.setViewportView(jTextArea1);
+
+        jTableUlogovaniKorisnici.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        jScrollPane2.setViewportView(jTableUlogovaniKorisnici);
+
+        jButtonPosaljiJednom.setText("posalji jednom korisniku");
+        jButtonPosaljiJednom.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButtonPosaljiJednomActionPerformed(evt);
+            }
+        });
+
+        jTableSveOstalePoruke.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        jScrollPane3.setViewportView(jTableSveOstalePoruke);
+
+        jTablePoslednjeTriPoruke1.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        jScrollPane4.setViewportView(jTablePoslednjeTriPoruke1);
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        getContentPane().setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(77, 77, 77)
+                        .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 272, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(53, 53, 53)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 51, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(jButtonPosaljiSvima)
+                                    .addComponent(jButtonPosaljiJednom))))))
+                .addGap(12, 12, 12)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 272, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 322, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(165, Short.MAX_VALUE))
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addGap(21, 21, 21)
+                .addComponent(jLabel1)
+                .addGap(18, 18, 18)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 221, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(jButtonPosaljiSvima)
+                        .addGap(18, 18, 18)
+                        .addComponent(jButtonPosaljiJednom)))
+                .addGap(36, 36, 36)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 242, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 242, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(49, Short.MAX_VALUE))
+        );
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void jButtonPosaljiSvimaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonPosaljiSvimaActionPerformed
+        String text = jTextArea1.getText();
+         if(text.length()>200){
+             JOptionPane.showMessageDialog(null, "GRESKA VALIDACIJA");
+             return;
+         }
+         Poruka p = new Poruka();
+         p.setTekstPoruke(text);
+         p.setPosiljalac(korisnik);
+        // p.setPrimalac(null);
+        p.setDatumVreme(new Date());
+         KlijentskiZahtev kz = new KlijentskiZahtev(Operacije.POSALJI_SVIMA, p);
+         
+         Komunikacija.getInstance().posaljiZahtev(kz);
+    }//GEN-LAST:event_jButtonPosaljiSvimaActionPerformed
+
+    private void jButtonPosaljiJednomActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonPosaljiJednomActionPerformed
+        String text = jTextArea1.getText();
+         if(text.length()>200){
+             JOptionPane.showMessageDialog(null, "GRESKA VALIDACIJA");
+             return;
+         }
+         int seletkovaniRed = jTableUlogovaniKorisnici.getSelectedRow();
+         if(seletkovaniRed==-1){
+              JOptionPane.showMessageDialog(null, "GRESKA VALIDACIJA");
+             return;
+         }
+         ModelTabeleUser mtu = (ModelTabeleUser) jTableUlogovaniKorisnici.getModel();
+         User primalac  = mtu.getLista().get(seletkovaniRed);
+         Poruka p = new Poruka();
+         p.setTekstPoruke(text);
+         p.setPosiljalac(korisnik); 
+         p.setPrimalac(primalac);
+         p.setDatumVreme(new Date());
+         KlijentskiZahtev kz = new KlijentskiZahtev(Operacije.POSALJI_JEDNOM, p);
+         
+         Komunikacija.getInstance().posaljiZahtev(kz);
+    }//GEN-LAST:event_jButtonPosaljiJednomActionPerformed
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String args[]) {
+        /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         */
+        try {
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (ClassNotFoundException ex) {
+            java.util.logging.Logger.getLogger(KlijentskaForma.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (InstantiationException ex) {
+            java.util.logging.Logger.getLogger(KlijentskaForma.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            java.util.logging.Logger.getLogger(KlijentskaForma.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(KlijentskaForma.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
+        //</editor-fold>
+
+        /* Create and display the form */
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                new KlijentskaForma().setVisible(true);
+            }
+        });
+    }
+
+
+public class ModelTabelePoruka extends AbstractTableModel{
+
+    private String[] kolone = {"datum-vreme", "posiljalac", "primalac", "tekst"};
+    private List<Poruka> lista;
+
+    public ModelTabelePoruka(List<Poruka> lista) {
+        this.lista = lista;
+    }
+
+    public List<Poruka> getLista() {
+        return lista;
+    }
+
+    public void setLista(List<Poruka> lista) {
+        this.lista = lista;
+    }
+    
+    
+    
+    @Override
+    public int getRowCount() {
+        return lista.size();
+    }
+
+    @Override
+    public int getColumnCount() {
+        return kolone.length;
+    }
+
+    @Override
+    public String getColumnName(int column) {
+        return kolone[column];
+    }
+
+    
+    
+    @Override
+    public Object getValueAt(int rowIndex, int columnIndex) {
+        Poruka p = lista.get(rowIndex);
+        
+        switch (columnIndex) {
+            case 0: return p.getDatumVreme();
+            case 1: return p.getPosiljalac().toString();
+            case 2: return p.getPrimalac().toString();
+            case 3: return p.getTekstPoruke().substring(0, 20) + "..."; //.substring(0,20) + "..." - znaci da ce se prikazati 20 karakteri i 3 tacke
+            default:
+                return "NA";
+        }
+    }
+    
+}
+
+
+
+public class ModelTabeleUser extends AbstractTableModel{
+
+    List<User> lista;
+    String[] kolone = {"id", "korisnickoIme"};
+
+    public ModelTabeleUser(List<User> lista) {
+        this.lista = lista;
+    }
+
+    public List<User> getLista() {
+        return lista;
+    }
+    
+    
+    
+    @Override
+    public int getRowCount() {
+        return lista.size();
+    }
+
+    @Override
+    public int getColumnCount() {
+        return kolone.length;
+    }
+
+    @Override
+    public String getColumnName(int column) {
+        return kolone[column];
+    }
+
+    
+    @Override
+    public Object getValueAt(int rowIndex, int columnIndex) {
+        User u = lista.get(rowIndex);
+        
+        switch (columnIndex) {
+            case 0: return u.getId();
+            case 1: return u.getKorisnickoIme();
+            default:
+                return "NA";
+        }
+    }
+    
+    

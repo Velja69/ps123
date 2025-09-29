@@ -1,0 +1,449 @@
+R
+==============================================================================================
+
+public class DBBroker {
+
+    public List<Korisnik> vratiSveKorisnike() {
+        
+        List<Korisnik> lista = new ArrayList<>();
+        try {
+            String upit = "SELECT * FROM user";
+            
+            PreparedStatement ps = Konekcija.getInstance().getConnection().prepareStatement(upit);
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()){
+                Korisnik k = new Korisnik();
+                k.setId(rs.getInt("id"));
+                k.setEmail(rs.getString("email"));
+                k.setIme(rs.getString("ime"));
+                k.setPrezime(rs.getString("prezime"));
+                k.setStatus(rs.getString("status"));
+                k.setLozinka(rs.getString("lozinka"));
+                
+                lista.add(k);
+            }
+            return lista;
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
+    }
+
+    public Korisnik login(Korisnik korisnik) {
+        List<Korisnik> lista = vratiSveKorisnike();
+        for (Korisnik k : lista) {
+            if(k.equals(korisnik)){
+                LocalDateTime sad = LocalDateTime.now();
+                azurirajStatus(k, "prijavljen" + sad);
+                k.setStatus("prijavljen" + sad);
+                return k;
+            }
+        }
+        return null;
+    }
+
+    private void azurirajStatus(Korisnik k, String status) {
+        try {
+            String upit = "UPDATE user set status = ? WHERE id = ?";
+            
+            PreparedStatement ps = Konekcija.getInstance().getConnection().prepareStatement(upit);
+            ps.setString(1, status);
+            ps.setInt(2, k.getId());
+            int uspeh = ps.executeUpdate();
+            if(uspeh>0){
+                Konekcija.getInstance().getConnection().commit();
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public boolean logout(Korisnik korisnik) {
+        //moze i manuelno da se stavi u try catch
+        LocalDateTime sad = LocalDateTime.now();
+        azurirajStatus(korisnik, "odjavljen" + sad);
+        return true;
+    }
+
+    public List<Rec> ucitajRecnik() {
+        
+        try {
+            List<Rec> lista = new ArrayList<>();
+            String upit = "SELECT * FROM rec";
+            PreparedStatement ps = Konekcija.getInstance().getConnection().prepareStatement(upit);
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()){
+                Rec r = new Rec();
+                r.setId(rs.getInt("id"));
+                r.setSrpskaRec(rs.getString("srpska_rec"));
+
+                lista.add(r);  
+            }
+             //1,kuca -> 2,pas -> 3,auto
+            for (Rec rec : lista) {
+                upit = "SELECT * FROM prevod WHERE srpska_rec_id = " + rec.getId();
+                System.out.println(upit);
+                ps = Konekcija.getInstance().getConnection().prepareStatement(upit);
+                rs = ps.executeQuery();
+                List<Prevod> prevodi = new ArrayList<>();
+                while(rs.next()){
+                    Prevod p = new Prevod();
+                    p.setId(rs.getInt("id"));
+                    p.setEngRec(rs.getString("eng_rec"));
+                    p.setRec(rec);
+                    prevodi.add(p);
+                }
+                rec.setPrevodi(prevodi);
+            }
+            
+            return lista;
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
+    }
+
+    public boolean unesi(Rec rec) {
+        
+        try {
+            String upit = "INSERT INTO rec (srpska_rec) VALUES (?)";
+            
+            PreparedStatement ps = Konekcija.getInstance().getConnection().prepareStatement(upit, Statement.RETURN_GENERATED_KEYS);
+            ps.setString(1, rec.getSrpskaRec());
+            ps.executeUpdate();
+
+            ResultSet rs = ps.getGeneratedKeys();
+            int noviID = -1;
+            if(rs.next()){
+                noviID = rs.getInt(1);
+            }else{
+                System.out.println("GRESKA PRILIKOM DOBIJANJA ID-a");
+            }
+            
+            
+            List<Prevod> lista = rec.getPrevodi();
+            
+            for (Prevod p : lista) {
+                upit = "INSERT INTO prevod (srpska_rec_id, eng_rec) VALUES (?, ?)";
+                ps = Konekcija.getInstance().getConnection().prepareStatement(upit);
+                ps.setInt(1, noviID);
+                ps.setString(2, p.getEngRec());
+                ps.executeUpdate();
+                
+            }
+            
+            Konekcija.getInstance().getConnection().commit();
+            return true;
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }
+        
+    }
+
+
+
+
+
+
+
+
+
+PR_STU
+==============================================================================================
+
+public class DBBroker {
+
+    public void popuniBazu() {
+        try {
+            String upit1 = "INSERT INTO PREDMET(naziv,sifra) VALUES (?,?)";
+            
+            PreparedStatement ps1 = Konekcija.getInstance().getConnection().prepareStatement(upit1);
+            ps1.setString(1, "P1");
+            ps1.setString(2, "1111");
+            ps1.executeUpdate();
+            Konekcija.getInstance().getConnection().commit();
+            
+            PreparedStatement ps2 = Konekcija.getInstance().getConnection().prepareStatement(upit1);
+            ps2.setString(1, "P2");
+            ps2.setString(2, "2222");
+            ps2.executeUpdate();
+            Konekcija.getInstance().getConnection().commit();
+            
+            PreparedStatement ps3 = Konekcija.getInstance().getConnection().prepareStatement(upit1);
+            ps3.setString(1, "P3");
+            ps3.setString(2, "3333");
+            ps3.executeUpdate();
+            Konekcija.getInstance().getConnection().commit();
+            
+            String upit2 = "INSERT INTO PROFESOR (ime, prezime, email, lozinka) VALUES (?, ?, ?, ?)";
+            
+            PreparedStatement ps4 = Konekcija.getInstance().getConnection().prepareStatement(upit2);
+            ps4.setString(1, "prof1");
+            ps4.setString(2, "prof1");
+            ps4.setString(3, "prof1@gmail.com");
+            ps4.setString(4, "prof1");
+            ps4.executeUpdate();
+            Konekcija.getInstance().getConnection().commit();
+            
+            PreparedStatement ps5 = Konekcija.getInstance().getConnection().prepareStatement(upit2);
+            ps5.setString(1, "prof2");
+            ps5.setString(2, "prof2");
+            ps5.setString(3, "prof2@gmail.com");
+            ps5.setString(4, "prof2");
+            ps5.executeUpdate();
+            Konekcija.getInstance().getConnection().commit();
+            
+            String upit3 = "INSERT INTO ANGAZOVANJE (profesor_id, predmet_id, vrsta) VALUES (?, ?, ?)";
+            
+            PreparedStatement ps6 = Konekcija.getInstance().getConnection().prepareStatement(upit3);
+            ps6.setInt(1, 7);
+            ps6.setInt(2, 19);
+            ps6.setString(3, VrsteAngazovanja.PREDAVANJA.toString());
+            ps6.executeUpdate();
+            Konekcija.getInstance().getConnection().commit();
+            
+            PreparedStatement ps7 = Konekcija.getInstance().getConnection().prepareStatement(upit3);
+            ps7.setInt(1, 8);
+            ps7.setInt(2, 19);
+            ps7.setString(3, VrsteAngazovanja.VEZBE.toString());
+            ps7.executeUpdate();
+            Konekcija.getInstance().getConnection().commit();
+            
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+    }
+
+    public Profesor login(Profesor profesor) {
+        
+        try {
+            List<Profesor> sviProfesori = new ArrayList<>();
+            
+            String upit = "SELECT * FROM PROFESOR";
+            
+            Statement st = Konekcija.getInstance().getConnection().createStatement();
+            ResultSet rs = st.executeQuery(upit);
+            
+            while(rs.next()){
+                Profesor p = new Profesor();
+                p.setId(rs.getInt("id"));
+                p.setIme(rs.getString("ime"));
+                p.setPrezime(rs.getString("prezime"));
+                p.setEmail(rs.getString("email"));
+                p.setLozinka(rs.getString("lozinka"));
+                sviProfesori.add(p);
+            }
+                for (Profesor pr : sviProfesori) {
+                    if(pr.equals(profesor)){
+                        return pr;
+                    }
+            }
+            
+            return null;
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        
+        return null;
+    }
+    
+    
+    //Login refaktorisani
+//    public Profesor login(Profesor profesor) {
+//   
+//            List<Profesor> sviProfesori = new ArrayList<>();
+//
+//                for (Profesor pr : sviProfesori) {
+//                    if(pr.equals(profesor)){
+//                        return pr;
+//                    }
+//            }
+//            return null;
+//    }
+
+    public List<Angazovanje> vratiAngazovanja(Profesor profesor) {
+        try {
+            List<Angazovanje> lista = new ArrayList<>();
+            
+            String upit = "SELECT * FROM ANGAZOVANJE A JOIN PREDMET P ON A.PREDMET_ID=P.ID WHERE PROFESOR_ID ="+profesor.getId();
+            
+            System.out.println(upit);
+            Statement st = Konekcija.getInstance().getConnection().createStatement();
+            ResultSet rs = st.executeQuery(upit);
+            
+            while(rs.next()){
+                Angazovanje a = new Angazovanje();
+                a.setProfesor(profesor);
+                Predmet p = new Predmet();
+                p.setId(rs.getInt("p.id"));
+                p.setNaziv(rs.getString("p.naziv"));
+                p.setSifra(rs.getString("p.sifra"));
+                a.setPredmet(p);
+                String vrstaString = rs.getString("a.vrsta");
+                VrsteAngazovanja va = VrsteAngazovanja.valueOf(vrstaString);
+                a.setVrsta(va);
+                a.setId(rs.getInt("a.id"));
+                
+                lista.add(a);
+            }
+            
+            return lista;
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        return null;
+    }
+
+    public List<Angazovanje> VratiAngazovanjaPredmet(Predmet predmet) {
+        try {
+            List<Angazovanje> lista = new ArrayList<>();
+            
+            String upit = "SELECT * FROM ANGAZOVANJE A JOIN PROFESOR P ON A.PREDMET_ID=P.ID WHERE PREDMET_ID ="+predmet.getId();
+            
+            System.out.println(upit);
+            Statement st = Konekcija.getInstance().getConnection().createStatement();
+            ResultSet rs = st.executeQuery(upit);
+            
+            while(rs.next()){
+                Angazovanje a = new Angazovanje();
+                Profesor p = new Profesor();
+                p.setId(rs.getInt("p.id"));
+                p.setIme(rs.getString("p.ime"));
+                p.setPrezime(rs.getString("p.prezime"));
+                p.setEmail(rs.getString("p.email"));
+                p.setLozinka(rs.getString("p.lozinka"));
+                a.setProfesor(p);
+                
+                a.setPredmet(predmet);
+                String vrstaString = rs.getString("a.vrsta");
+                VrsteAngazovanja va = VrsteAngazovanja.valueOf(vrstaString);
+                a.setVrsta(va);
+                a.setId(rs.getInt("a.id"));
+                
+                lista.add(a);
+            }
+            
+            return lista;
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        return null;
+    }
+
+    public boolean obrisiAng(Angazovanje angazovanje) {
+        try {
+            String upit = "DELETE FROM ANGAZOVANJE WHERE ID="+angazovanje.getId();
+            
+            Statement st = Konekcija.getInstance().getConnection().createStatement();
+            int rezultat = st.executeUpdate(upit);
+            Konekcija.getInstance().getConnection().commit();
+            if(rezultat>0){
+                return true;
+            }else{
+                return false;
+            }
+            
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        return false;
+    }
+
+    public List<Predmet> vratiPredmete() {
+        List<Predmet> lista = new ArrayList<>();
+        try {
+            String upit = "SELECT * FROM PREDMET";
+            
+            Statement st = Konekcija.getInstance().getConnection().createStatement();
+            ResultSet rs = st.executeQuery(upit);
+            
+            while(rs.next()){
+                Predmet p = new Predmet();
+                p.setId(rs.getInt("id"));
+                p.setNaziv(rs.getString("naziv"));
+                p.setSifra(rs.getString("sifra"));
+                
+                lista.add(p);
+            }
+            return lista;
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
+    }
+
+    public List<Profesor> vratiProfesore() {
+        try {
+            List<Profesor> sviProfesori = new ArrayList<>();
+            
+            String upit = "SELECT * FROM PROFESOR";
+            
+            Statement st = Konekcija.getInstance().getConnection().createStatement();
+            ResultSet rs = st.executeQuery(upit);
+            
+            while(rs.next()){
+                Profesor p = new Profesor();
+                p.setId(rs.getInt("id"));
+                p.setIme(rs.getString("ime"));
+                p.setPrezime(rs.getString("prezime"));
+                p.setEmail(rs.getString("email"));
+                p.setLozinka(rs.getString("lozinka"));
+                sviProfesori.add(p);
+            }
+                return sviProfesori;
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
+    }
+
+    public boolean kreirajAng(Angazovanje angazovanje) {
+        try {
+            //VALIDACIJA 1
+            String upit1 = "SELECT COUNT(*) AS broj FROM ANGAZOVANJE WHERE predmet_id = ? AND vrsta = ?";
+            PreparedStatement ps1 = Konekcija.getInstance().getConnection().prepareStatement(upit1);
+            ps1.setInt(1, angazovanje.getPredmet().getId());
+            ps1.setString(2, VrsteAngazovanja.PREDAVANJA.toString());
+            ResultSet rs1 = ps1.executeQuery();
+            if(rs1.next() && rs1.getInt("broj") >= 3){
+                return false; // Vec ima 3 profesora na predavanju
+            }
+            
+            //VALIDACIJA 2
+            String upit2 = "SELECT COUNT(DISTINCT predmet_id) AS broj FROM ANGAZOVANJE WHERE profesor_id = ?";
+            PreparedStatement ps2 = Konekcija.getInstance().getConnection().prepareStatement(upit2);
+            ps2.setInt(1, angazovanje.getProfesor().getId());
+            ResultSet rs2 = ps2.executeQuery();
+            if(rs2.next() && rs2.getInt("broj") >= 5){
+                return false; // Vec je angazovan na 5 predmeta
+            }
+            
+            String upit = "INSERT INTO ANGAZOVANJE (profesor_id, predmet_id, vrsta) VALUES (?,?,?)";
+            
+            PreparedStatement ps = Konekcija.getInstance().getConnection().prepareStatement(upit);
+            ps.setInt(1, angazovanje.getProfesor().getId());
+            ps.setInt(2, angazovanje.getPredmet().getId());
+            ps.setString(3, angazovanje.getVrsta().toString());
+            int rez = ps.executeUpdate();
+            Konekcija.getInstance().getConnection().commit();
+            if(rez>0){
+                return true;
+            }else{
+                return false;
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+            return false;
+    }
+    
+}

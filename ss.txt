@@ -1,0 +1,763 @@
+ZAJED
+============================================================================================
+angazovanje, korisnik, predmet, profesor, zvanje
+
+public class Operacije {
+    
+    public static final int LOGIN = 1;
+     public static final int DODAJ_PROF = 2;
+     public static final int DODAJ_PREDMET = 3;
+     public static final int UCITAJ_PROFESORE = 4;
+    public static final int UCITAJ_PREDMETE = 5;
+    public static final int UCITAJ_ANGAZOVANJE = 6;
+    public static final int SACUVAJ_ANGAZOVANJA = 7;
+}
+
+
+
+
+
+
+
+
+
+SER
+============================================================================================
+
+public class DBBroker {
+
+    public Profesor unesiProf(Profesor profesor) {
+        
+        try {
+            String upit = "INSERT INTO profesor (ime, prezime, zvanje, email) VALUES (?, ?, ?, ?)";
+            
+            PreparedStatement ps = Konekcija.getInstance().getConnection().prepareStatement(upit, Statement.RETURN_GENERATED_KEYS);
+            ps.setString(1, profesor.getIme());
+            ps.setString(2, profesor.getPrezime());
+            ps.setString(3, profesor.getZvanje().toString());
+            ps.setString(4, profesor.getEmail());
+            
+            ps.executeUpdate();
+            Konekcija.getInstance().getConnection().commit();
+            
+            ResultSet rs = ps.getGeneratedKeys();
+            if(rs.next()){
+                int id = rs.getInt("id");
+                profesor.setId(id);
+                return profesor;
+            }
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        return null;
+    }
+
+    public boolean unesiPredmet(Predmet predmet) {
+        
+        try {
+            String upit = "INSERT INTO predmet (naziv, kod, esp) VALUES (?, ?, ?)";
+            PreparedStatement ps = Konekcija.getInstance().getConnection().prepareStatement(upit);
+            ps.setString(1, predmet.getNaziv());
+            ps.setString(2, predmet.getKod());
+            ps.setInt(3, predmet.getEsp());
+            
+            int brojRedova = ps.executeUpdate();
+            Konekcija.getInstance().getConnection().commit();
+            if(brojRedova >0){
+                return true;
+            }else{
+                return false;
+            }
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return false;
+    }
+
+    public List<Profesor> ucitajProfesore() {
+        List<Profesor> lista = new ArrayList<>();
+        
+        try {
+            String upit = "SELECT * FROM profesor";
+            
+            Statement st = Konekcija.getInstance().getConnection().createStatement();
+            ResultSet rs = st.executeQuery(upit);
+            while(rs.next()){
+                int id = rs.getInt("id");
+                String ime = rs.getString("ime");
+                String prezime = rs.getString("prezime");
+                String email = rs.getString("email");
+                Zvanje zvanje = Zvanje.valueOf(rs.getString("zvanje"));
+                
+                Profesor p = new Profesor(id, ime, prezime, zvanje, email);
+                lista.add(p);
+            }
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return lista;
+    }
+
+    public List<Predmet> ucitajPredmete() {
+        List<Predmet> lista = new ArrayList<>();
+        
+        try {
+            String upit = "SELECT * FROM predmet";
+            
+            Statement st = Konekcija.getInstance().getConnection().createStatement();
+            ResultSet rs = st.executeQuery(upit);
+            while(rs.next()){
+                int sifraPredmeta = rs.getInt("id"); //sifraPredmeta se u bazi zove "id"
+                String naziv = rs.getString("naziv");
+                String kod = rs.getString("kod");
+                int esp = rs.getInt("esp");
+                
+                Predmet p = new Predmet(sifraPredmeta, naziv, kod, esp);
+                lista.add(p);
+            }
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return lista;
+    }
+
+    public Predmet vratiPredmetNaOsnovuID(int id){
+        
+        List<Predmet> predmeti = ucitajPredmete();
+            for (Predmet p : predmeti) {
+                if(p.getSifraPredmeta() == id){
+                    return p;
+                }
+            }
+        return null;
+    }
+    
+    public List<Angazovanje> ucitajAngazovanja(Profesor profesor) {
+        //za upit se radi ili join ili preko metoda koje smo vec napravili
+        //ovde smo preko metoda koje smo vec napravili
+        
+        List<Angazovanje> lista = new ArrayList<>();
+    
+
+        try {
+            String upit = "SELECT * FROM angazovanje";
+            
+            Statement st = Konekcija.getInstance().getConnection().createStatement();
+            ResultSet rs = st.executeQuery(upit);
+            while(rs.next()){
+                
+                int id = rs.getInt("id");
+                Date datumSql = rs.getDate("datum");
+                Date datumUtil = new Date(datumSql.getTime());
+                String email = rs.getString("email");
+                
+                int predmetId = rs.getInt("predmet");
+                Predmet predmet = vratiPredmetNaOsnovuID(predmetId); //ovako vracamo predmet, ovo je moglo isto i za profesora da se uradi da nam vec nije dat u potpisu metode
+                
+                Angazovanje a = new Angazovanje(id, datumUtil, profesor, predmet, email);
+                
+                lista.add(a);
+            }
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return lista;
+    }
+
+    public boolean sacuvajAngazovanja(List<Angazovanje> list) {
+        try {
+            //radimo transakciju - to je ovo
+            Profesor profesor = list.get(0).getProfesor();
+            String upit1 = "DELETE FROM angazovanje WHERE profesor = " + profesor.getId();
+            System.out.println(upit1);
+            
+            Statement st1 = Konekcija.getInstance().getConnection().createStatement();
+            st1.executeUpdate(upit1);
+            
+            String upit2 = "INSERT INTO angazovanje (datum, profesor, predmet, email) VALUES (?, ?, ?, ?)";
+            PreparedStatement ps = Konekcija.getInstance().getConnection().prepareStatement(upit2);
+            
+            
+            for (Angazovanje a : list) {
+                ps.setDate(1, new Date(a.getDatum().getTime()));
+                ps.setInt(2, profesor.getId());
+                ps.setInt(3, a.getPredmet().getSifraPredmeta());
+                ps.setString(4, a.getEmail());
+                
+                ps.addBatch();
+            }
+            ps.executeBatch();
+            
+            Konekcija.getInstance().getConnection().commit();
+            return true;
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(DBBroker.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return false;
+    }
+    
+}
+
+
+
+public class Controller {
+    private static Controller instance;
+    private DBBroker dbb;
+    
+    private List<Korisnik> sviKorisnici = new ArrayList<>();
+
+    public Controller() {
+        
+        Korisnik k1 = new Korisnik(1, "velja", "velja", "velja@gmail.com", "velja");
+        Korisnik k2 = new Korisnik(2, "velja2", "velja2", "velja2@gmail.com", "velja2");
+        Korisnik k3 = new Korisnik(3, "velja3", "velja3", "velja3@gmail.com", "velja3");
+        Korisnik k4 = new Korisnik(4, "velja4", "velja4", "velja4@gmail.com", "velja4");
+        Korisnik k5 = new Korisnik(5, "velja5", "velja5", "velja5@gmail.com", "velja5");
+        
+        sviKorisnici.add(k1);
+        sviKorisnici.add(k2);
+        sviKorisnici.add(k3);
+        sviKorisnici.add(k4);
+        sviKorisnici.add(k5);
+        
+        dbb = new DBBroker();
+    }
+
+    public static Controller getInstance() {
+        if(instance == null){
+            instance = new Controller();
+        }
+        return instance;
+    }
+
+    public Korisnik login(Korisnik korisnik) {
+        
+        for (Korisnik k : sviKorisnici) {
+            if(k.getEmail().equals(korisnik.getEmail()) && k.getLozinka().equals(korisnik.getLozinka())){
+                return k;
+            }
+        }
+        return null;
+    }
+
+    public Profesor unesiProf(Profesor profesor) {
+        return dbb.unesiProf(profesor);
+    }
+
+    public boolean unesiPredmet(Predmet predmet) {
+        return dbb.unesiPredmet(predmet);
+    }
+
+    public List<Profesor> ucitajProfesore() {
+         return dbb.ucitajProfesore();
+    }
+
+    public List<Predmet> ucitajPredmete() {
+        return dbb.ucitajPredmete();
+    }
+
+    public List<Angazovanje> ucitajAngazovanja(Profesor profesor) {
+        return dbb.ucitajAngazovanja(profesor);
+    }
+
+    public boolean sacuvajAngazovanja(List<Angazovanje> list) {
+        return dbb.sacuvajAngazovanja(list);
+    }
+
+
+public class ModelTabele1 extends AbstractTableModel{
+ 
+    private String[] kolone = {"ime", "prezime", "brojAngazovanja"};
+    private List<Profesor> lista;
+
+    public ModelTabele1(List<Profesor> lista) {
+        this.lista = lista;
+    }
+
+    @Override
+    public int getRowCount() {
+        return lista.size();
+    }
+
+    @Override
+    public int getColumnCount() {
+        return kolone.length;
+    }
+
+    @Override
+    public String getColumnName(int column) {
+        return kolone[column];
+    }
+    
+    
+
+    @Override
+    public Object getValueAt(int rowIndex, int columnIndex) {
+        Profesor p = lista.get(rowIndex);
+         List<Angazovanje> svaAngazovanja = Controller.getInstance().ucitajAngazovanja(p);
+        
+        switch (columnIndex) {
+            case 0: return p.getIme();
+            case 1: return p.getPrezime();
+            case 2: return svaAngazovanja.size();
+
+            default:
+                return "NA";
+        }
+    }
+
+    public List<Profesor> getLista() {
+        return lista;
+    }
+    
+}
+
+
+public class ModelTabele2 extends AbstractTableModel{
+    
+    private Zvanje[] zvanja = Zvanje.values();
+    private String[] kolone = {"zvanje", "brojProfesor"};
+    
+    private List<Profesor> lista;
+
+    public ModelTabele2(List<Profesor> lista) {
+        this.lista = lista;
+    }
+    
+    
+
+    @Override
+    public int getRowCount() {
+        return zvanja.length;
+    }
+
+    @Override
+    public int getColumnCount() {
+        return kolone.length;
+    }
+
+    @Override
+    public String getColumnName(int column) {
+        return kolone[column];
+    }
+    
+    
+
+    @Override
+    public Object getValueAt(int rowIndex, int columnIndex) {
+       Zvanje z = zvanja[rowIndex];
+       int brojac = 0;
+        
+       for (Profesor p : lista) {
+           if(p.getZvanje().equals(z)){
+                brojac++;
+           }
+        }
+        
+       if(brojac>0){
+           switch (columnIndex) {
+            case 0: return z;
+            case 1: return brojac;
+
+            default:
+                return "NA";
+            }
+       }else{
+           switch (columnIndex) {
+            case 0: return null;
+            case 1: return null;
+
+            default:
+                return "NA";
+            }
+        }
+    }
+
+PokreniServer ps;
+    OsveziTabelu1 nit1;
+    OsveziTabelu2 nit2;
+    /**
+     * Creates new form ServerskaForma
+     */
+    public ServerskaForma() {
+        initComponents();
+        
+        //popuniTabelu1();
+        nit1 = new OsveziTabelu1(this);
+        nit1.start();
+        
+        //popuniTabelu2();
+        nit2 = new OsveziTabelu2(this);
+        nit2.start();
+        
+        ps = new PokreniServer();
+        ps.start();
+  
+    }
+
+public void popuniTabelu1() {
+        
+        List<Profesor> sviProfesori = Controller.getInstance().ucitajProfesore();
+        
+        ModelTabele1 mt1 = new ModelTabele1(sviProfesori);
+        jTable1.setModel(mt1);
+        System.out.println("TABELA 1 OSVEZENA");
+        
+        
+    }
+
+    public void popuniTabelu2() {
+
+        List<Profesor> sviProfesori = Controller.getInstance().ucitajProfesore();
+        
+        ModelTabele2 mt2 = new ModelTabele2(sviProfesori);
+        jTable2.setModel(mt2);
+        System.out.println("TABELA 2 OSVEZENA");
+    }
+
+
+public class OsveziTabelu1 extends Thread{
+    
+    private boolean kraj = false;
+    private ServerskaForma sf;
+
+    public OsveziTabelu1(ServerskaForma sf) {
+        this.sf = sf;
+    }
+
+    @Override
+    public void run() {
+        while(!kraj){
+            sf.popuniTabelu1();
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(OsveziTabelu1.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+    
+    public void zaustavi(){
+        kraj = true;
+    }
+}
+
+
+public class ObradaKlijentskihZahteva extends Thread {
+    
+    private Socket s;
+
+    public ObradaKlijentskihZahteva(Socket s) {
+        this.s = s;
+    }
+
+    @Override
+    public void run() {
+        while(true){
+          KlijentskiZahtev kz = primiZahtev();
+        ServerskiOdgovor so = new ServerskiOdgovor();
+        
+        switch (kz.getOperacija()) {
+            case Operacije.LOGIN:
+                Korisnik k = Controller.getInstance().login((Korisnik) kz.getParametar());
+                so.setOdgovor(k);
+                break;
+            case Operacije.DODAJ_PROF:
+                Profesor p = Controller.getInstance().unesiProf((Profesor) kz.getParametar());
+                so.setOdgovor(p);
+                break;
+            case Operacije.DODAJ_PREDMET:
+                boolean uspesno = Controller.getInstance().unesiPredmet((Predmet) kz.getParametar());
+                so.setOdgovor(uspesno);
+                break;
+            case Operacije.UCITAJ_PROFESORE:
+                List<Profesor> lista = Controller.getInstance().ucitajProfesore();
+                so.setOdgovor(lista);
+                break;
+            case Operacije.UCITAJ_PREDMETE:
+                List<Predmet> lista2 = Controller.getInstance().ucitajPredmete();
+                so.setOdgovor(lista2);
+                break;
+            case Operacije.UCITAJ_ANGAZOVANJE:
+                List<Angazovanje> lista3 = Controller.getInstance().ucitajAngazovanja((Profesor) kz.getParametar());
+                so.setOdgovor(lista3);
+                break;
+             case Operacije.SACUVAJ_ANGAZOVANJA:
+                boolean uspeh = Controller.getInstance().sacuvajAngazovanja((List<Angazovanje>) kz.getParametar());
+                so.setOdgovor(uspeh);
+                break;
+            default:
+                System.out.println("GRESKA");
+        }
+        posaljiOdgovor(so);  
+        }
+    }
+
+    private KlijentskiZahtev primiZahtev() {
+        try {
+            ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
+            return (KlijentskiZahtev) ois.readObject();
+        } catch (IOException ex) {
+            Logger.getLogger(ObradaKlijentskihZahteva.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(ObradaKlijentskihZahteva.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
+    }
+
+    private void posaljiOdgovor(ServerskiOdgovor so) {
+        try {
+            ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
+            oos.writeObject(so);
+        } catch (IOException ex) {
+            Logger.getLogger(ObradaKlijentskihZahteva.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+KLIJ
+============================================================================================
+
+
+
+
+public class KlijentskaForma extends javax.swing.JFrame {
+
+    private Korisnik ulogovaniKorisnik;
+    private Profesor p;
+    
+    /**
+     * Creates new form KlijentskaForma
+     */
+    public KlijentskaForma(Korisnik k) {
+        initComponents();
+        this.ulogovaniKorisnik = k;
+        
+        jLabelIme.setText(k.getIme());
+        jLabelPrezime.setText(k.getPrezime());
+        
+        jComboBoxZvanje.removeAllItems();
+        Zvanje[] zvanja = Zvanje.values();
+        for (Zvanje z : zvanja) {
+            jComboBoxZvanje.addItem(z.toString());
+        }
+        
+        popuniTabelu();
+    }
+
+
+private void jButtonDodajProfesoraActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonDodajProfesoraActionPerformed
+        String ime = jTextFieldIme.getText();
+        String prezime = jTextFieldPrezime.getText();
+        
+        String strZvanje = (String) jComboBoxZvanje.getSelectedItem();
+        Zvanje zvanje = Zvanje.valueOf(strZvanje);
+        
+        p = new Profesor(-1, ime, prezime, zvanje, ulogovaniKorisnik.getEmail());
+        KlijentskiZahtev kz = new KlijentskiZahtev(Operacije.DODAJ_PROF, p);
+        Komunikacija.getInstance().posaljiZahtev(kz);
+        
+        ServerskiOdgovor so = Komunikacija.getInstance().primiOdgovor();
+        p = (Profesor) so.getOdgovor();
+        if(p == null){
+            JOptionPane.showMessageDialog(null, "USPESNO UNETO");
+            popuniTabelu();
+        }else{
+            JOptionPane.showMessageDialog(null, "GRESKA PRI UNOSU");
+        }
+    }//GEN-LAST:event_jButtonDodajProfesoraActionPerformed
+
+    private void jButtonDodajPredmetActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonDodajPredmetActionPerformed
+        String naziv = jTextFieldNazivPredmeta.getText();
+        int esp = Integer.parseInt(jTextFieldEsp.getText());
+        String kod = jTextFieldKod.getText();
+        
+        Predmet p = new Predmet(-1, naziv, kod, esp);
+        KlijentskiZahtev kz = new KlijentskiZahtev(Operacije.DODAJ_PREDMET, p);
+        Komunikacija.getInstance().posaljiZahtev(kz);
+        
+        ServerskiOdgovor so = Komunikacija.getInstance().primiOdgovor();
+        
+        boolean uspesno = (boolean) so.getOdgovor();
+        if(uspesno){
+            JOptionPane.showMessageDialog(null, "USPESNO UNETO");
+        }else{
+            JOptionPane.showMessageDialog(null, "GRESKA PRI UNOSU");
+        }
+    }//GEN-LAST:event_jButtonDodajPredmetActionPerformed
+
+    private void jButtonDodajAngazovanjaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonDodajAngazovanjaActionPerformed
+        int selektovaniRed = jTableProfesori.getSelectedRow();
+        if(selektovaniRed == -1){
+            JOptionPane.showMessageDialog(null, "NISTE ODABRALI PROFESORA");
+            return;
+        }
+        ModelTabeleProfesor mtp = (ModelTabeleProfesor) jTableProfesori.getModel();
+        Profesor p = mtp.getLista().get(selektovaniRed);
+        UnosAngazovanjaForma1 uaf = new UnosAngazovanjaForma1(this, false, p, ulogovaniKorisnik);
+        uaf.setVisible(true);
+    }//GEN-LAST:event_jButtonDodajAngazovanjaActionPerformed
+
+
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton jButtonDodajAngazovanja;
+    private javax.swing.JButton jButtonDodajPredmet;
+    private javax.swing.JButton jButtonDodajProfesora;
+    private javax.swing.JComboBox<String> jComboBoxZvanje;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel jLabel5;
+    private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel8;
+    private javax.swing.JLabel jLabelIme;
+    private javax.swing.JLabel jLabelPrezime;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JTable jTableProfesori;
+    private javax.swing.JTextField jTextFieldEsp;
+    private javax.swing.JTextField jTextFieldIme;
+    private javax.swing.JTextField jTextFieldKod;
+    private javax.swing.JTextField jTextFieldNazivPredmeta;
+    private javax.swing.JTextField jTextFieldPrezime;
+    // End of variables declaration//GEN-END:variables
+
+    private void popuniTabelu() {
+        KlijentskiZahtev kz = new KlijentskiZahtev(Operacije.UCITAJ_PROFESORE, null);
+        Komunikacija.getInstance().posaljiZahtev(kz);
+        
+        ServerskiOdgovor so = Komunikacija.getInstance().primiOdgovor();
+        List<Profesor> lista = (List<Profesor>) so.getOdgovor();
+        
+        ModelTabeleProfesor mtp = new ModelTabeleProfesor(lista);
+        jTableProfesori.setModel(mtp);
+    }
+}
+
+
+public class ModelTabeleAngazovanje extends AbstractTableModel{
+    
+    private String[] kolone = {"datum", "predmet"};
+    private List<Angazovanje> lista;
+
+    public ModelTabeleAngazovanje(List<Angazovanje> lista) {
+        this.lista = lista;
+    }
+    
+    
+    
+    @Override
+    public int getRowCount() {
+        return lista.size();
+    }
+
+    @Override
+    public int getColumnCount() {
+        return kolone.length;
+    }
+
+    @Override
+    public String getColumnName(int column) {
+        return kolone[column];
+    }
+    
+    
+
+    @Override
+    public Object getValueAt(int rowIndex, int columnIndex) {
+        Angazovanje a = lista.get(rowIndex);
+        
+        switch (columnIndex) {
+            case 0: return a.getDatum();
+            case 1: return a.getPredmet().getNaziv();
+            default:
+                return "NA";
+        }
+    }
+
+    public List<Angazovanje> getLista() {
+        return lista;
+    }
+
+    public void dodaj(Angazovanje a) {
+        lista.add(a);
+        fireTableDataChanged();
+    }
+
+    public void obrisi(int selektovaniRed) {
+        lista.remove(selektovaniRed);
+        fireTableDataChanged();
+    }
+
+    public void osveziTabelu() {
+        fireTableDataChanged();
+    }
+
+    public void azurirajAngazovanje(Angazovanje a) {
+        
+        for (Angazovanje angazovanje : lista) {
+            if(angazovanje.getPredmet().equals(a.getPredmet()) && angazovanje.getProfesor().equals(a.getProfesor())){
+                angazovanje.setDatum(a.getDatum());
+            }
+        }
+        fireTableDataChanged();
+    }
+}
+
+
+
+public class ModelTabeleProfesor extends AbstractTableModel{
+
+    private String[] kolone = {"id", "ime", "prezime", "zvanje", "email"};
+    private List<Profesor> lista;
+
+    public ModelTabeleProfesor(List<Profesor> lista) {
+        this.lista = lista;
+    }
+    
+    
+    
+    @Override
+    public int getRowCount() {
+        return lista.size();
+    }
+
+    @Override
+    public int getColumnCount() {
+        return kolone.length;
+    }
+
+    @Override
+    public String getColumnName(int column) {
+        return kolone[column];
+    }
+    
+    
+
+    @Override
+    public Object getValueAt(int rowIndex, int columnIndex) {
+        Profesor p = lista.get(rowIndex);
+        
+        switch (columnIndex) {
+            case 0: return p.getId();
+            case 1: return p.getIme();
+            case 2: return p.getPrezime();
+            case 3: return p.getZvanje();
+            case 4: return p.getEmail();
+            
+            default:
+                return "NA";
+        }
+    }
+
+    public List<Profesor> getLista() {
+        return lista;
+    }
